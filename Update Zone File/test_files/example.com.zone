@@ -1,0 +1,61 @@
+;
+; BIND data file for example.com
+;
+$ORIGIN example.com.
+$TTL	600
+
+@	IN	SOA	ns1.example.com. hostmaster.example.com. (
+		2021071701		; Serial
+			     2m		; Refresh
+			     5m		; Retry
+			     5m		; Expire
+			    10s )	; Negative Cache TTL
+
+; Name Servers
+example.com.         IN NS       ns1.example.com.
+example.com.         IN NS       ns2.example.com.
+example.com.         IN NS       ns3.example.com.
+
+; A+AAAA records for name servers
+ns1                     IN A        127.0.0.2
+                        IN AAAA     ::2
+ns2                     IN A        127.0.0.3
+                        IN AAAA     ::3 
+ns3                     IN A        127.0.0.4
+                        IN AAAA     ::4
+
+; A+AAAA records
+@                       IN A        127.0.0.5
+                        IN AAAA     ::5
+
+www                     IN A        127.0.0.5
+                        IN AAAA     ::5
+
+mail                    IN A        127.0.0.6
+                        IN AAAA     ::6
+
+service1                IN A        127.0.0.7
+                        IN AAAA     ::7
+
+service2                IN A        127.0.0.8
+                        IN AAAA     ::8
+
+; A records
+blah                    IN A        127.0.0.9
+
+; AAAA records
+
+; MX records
+@                       IN MX    10 mail
+
+; CNAME records
+assets                  IN CNAME    www
+imap                    IN CNAME    mail
+pop                     IN CNAME    mail
+smtp                    IN CNAME    mail
+
+; SPF/TXT records
+example.com.            IN TXT      "v=spf1 ~all"
+                        IN SPF      "v=spf1 ~all"
+
+; SRV records

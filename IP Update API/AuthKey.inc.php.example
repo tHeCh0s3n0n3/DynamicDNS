@@ -1,0 +1,4 @@
+<?php
+
+global $AuthKey;
+$AuthKey = base64_encode("username:password");
