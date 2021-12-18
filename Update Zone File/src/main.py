@@ -85,7 +85,7 @@ def GetNewIPAddress(url: str, credentials: str):
         if err.code == 401:
             if not quiet:
                 print("HTTP Authentication failed. Quitting")
-                exit(2)
+            exit(2)
 
     return newIPs
 
@@ -111,9 +111,11 @@ def UpdateZoneFile(zoneFile, ipsToTest, subdomains):
                         ])
     for line in zoneFile:
         lineParts = line.split()
+        
         if line[0] == ";" or len(lineParts) == 0:
             newZoneFile.append(line)
             continue
+        
         if len(lineParts) == 1 and not updatedSerial:
             if str(lineParts[0]).startswith(newSerial):
                 # we need to update the serial number
@@ -130,6 +132,7 @@ def UpdateZoneFile(zoneFile, ipsToTest, subdomains):
             newZoneFile.append(line.replace(lineParts[3], newIP["ip"]))
             if newZoneFile[-1] != line:
                 zoneFileUpdated = True
+        
         else:
             newZoneFile.append(line)
     
