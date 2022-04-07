@@ -11,14 +11,18 @@ import json
 import urllib.request
 import logging
 
-def main(filename: str, url: str, credentials: str, subdomains: list, dbg: bool, shush: bool):
+def main(filename: str, url: str, credentials: str, subdomains: list, dbg: bool, shush: bool, isCron: bool):
     level = logging.INFO
     if dbg:
         level = logging.DEBUG
     if shush:
         level = logging.CRITICAL
     
-    fmt = '[%(levelname)s] %(asctime)s %(message)s'
+    fmt = '%(asctime)s [%(levelname)s] %(message)s'
+    
+    if isCron:
+        fmt = '[%(levelname)s] %(message)s'
+
     logging.basicConfig(level=level, format=fmt)
 
     logging.debug(f"Starting application from {__file__}")
@@ -148,6 +152,7 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--url", help="URL from which to fetch the data")
     parser.add_argument("-c", "--credentials", help="Credentials to use in the HTTP Authorization header (username:password)")
     parser.add_argument("-s", "--subdomains", help="Subdomains to update")
+    parser.add_argument("-t", "--timer-job", action="store_false", help="Indicate that this is running from a cron job/systemd timer")
     parser.add_argument("zonefile", help="Zone file to update")
     args = parser.parse_args()
-    main(args.zonefile, args.url, args.credentials, str(args.subdomains).split(","), args.verbose, args.quiet)
+    main(args.zonefile, args.url, args.credentials, str(args.subdomains).split(","), args.verbose, args.quiet, args.timer_job)
