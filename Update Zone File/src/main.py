@@ -2,31 +2,33 @@
 
 from argparse import ArgumentParser
 from os import path
-from pprint import pprint as pp
+from pprint import pformat
 from sys import exit
 from urllib.error import HTTPError
 import base64
 import datetime
 import json
 import urllib.request
-
-debug = False
-quiet = False
+import logging
 
 def main(filename: str, url: str, credentials: str, subdomains: list, dbg: bool, shush: bool):
-    global debug, quiet
-    debug = dbg
-    quiet = shush
+    level = logging.INFO
+    if dbg:
+        level = logging.DEBUG
+    if shush:
+        level = logging.CRITICAL
+    
+    fmt = '[%(levelname)s] %(asctime)s %(message)s'
+    logging.basicConfig(level=level, format=fmt)
 
-    if debug:
-        print(f"Starting application from {__file__}")
-        print("INPUTS:")
-        print(f"    Zone File: {filename}")
-        print(f"          Url: {url}")
-        print(f"  Credentials: {credentials}")
-        print(f"   Subdomains: {subdomains}")
-        print(f"        Debug: {dbg}")
-        print(f"        Quiet: {shush}")
+    logging.debug(f"Starting application from {__file__}")
+    logging.debug("INPUTS:")
+    logging.debug(f"    Zone File: {filename}")
+    logging.debug(f"          Url: {url}")
+    logging.debug(f"  Credentials: {credentials}")
+    logging.debug(f"   Subdomains: {subdomains}")
+    logging.debug(f"        Debug: {dbg}")
+    logging.debug(f"        Quiet: {shush}")
 
     if filename[:2] == "..":
         zoneFilePath = path.abspath(path.dirname(path.abspath(__file__))
@@ -34,28 +36,25 @@ def main(filename: str, url: str, credentials: str, subdomains: list, dbg: bool,
                                     + filename)
     else:
         zoneFilePath = path.abspath(filename)
-    if debug:
-        print(f"Fetching {zoneFilePath}")
+
+    logging.debug(f"Fetching {zoneFilePath}")
 
     zoneFile = GetZoneFile(zoneFilePath)
     
     ipToTest = GetNewIPAddress(url, credentials)
-    if debug:
-        print("IPs to test: ")
-        pp(ipToTest)
+    
+    logging.debug(f"IPs to test:\n{pformat(ipToTest)}")
 
     updatedZoneFile = UpdateZoneFile(zoneFile, ipToTest, subdomains)
-    if debug:
-        pp(updatedZoneFile)
+    
+    logging.debug(f"Updated zone file:\n{pformat(updatedZoneFile)}")
     
     if updatedZoneFile is zoneFile:        
         retval = 1
-        if not quiet:
-            print("Zone file unchanged, exiting.")
+        logging.info("Zone file unchanged, exiting.")
     else:
         retval = 0
-        if not quiet:
-            print("Zone file changed, writing new zone file!")
+        logging.info("Zone file changed, writing new zone file!")
         WriteZoneFile(zoneFilePath, updatedZoneFile)
     exit(retval)
 
@@ -80,11 +79,12 @@ def GetNewIPAddress(url: str, credentials: str):
                                                      .decode("ascii")}
         with urllib.request.urlopen(
             urllib.request.Request(url, headers=headers, method="GET")) as response:
-            newIPs = json.loads(response.read())
+            responseBody = response.read()
+            logging.debug(f"Response Body:\n{responseBody}")
+            newIPs = json.loads(responseBody)
     except HTTPError as err:
         if err.code == 401:
-            if not quiet:
-                print("HTTP Authentication failed. Quitting")
+            logging.error("HTTP Authentication failed. Quitting")
             exit(2)
 
     return newIPs
@@ -99,8 +99,7 @@ def UpdateZoneFile(zoneFile, ipsToTest, subdomains):
         foundSubdomain = True
 
     if not foundSubdomain:
-        if debug:
-            print("Subdomain not found in list from server")
+        logging.debug("Subdomain not found in list from server")
         return zoneFile
     
     updatedSerial = False
@@ -126,8 +125,7 @@ def UpdateZoneFile(zoneFile, ipsToTest, subdomains):
             newZoneFile.append(line.replace(lineParts[0], newSerial))
     
         elif lineParts[0] in subdomains:
-            if debug:
-                print("Found a subdomain we want to change!")
+            logging.debug("Found a subdomain we want to change!")
             newIP = next(item for item in ipsToTest if item["subdomain"] == lineParts[0])
             newZoneFile.append(line.replace(lineParts[3], newIP["ip"]))
             if newZoneFile[-1] != line:
