@@ -152,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--url", help="URL from which to fetch the data")
     parser.add_argument("-c", "--credentials", help="Credentials to use in the HTTP Authorization header (username:password)")
     parser.add_argument("-s", "--subdomains", help="Subdomains to update")
-    parser.add_argument("-t", "--timer-job", action="store_false", help="Indicate that this is running from a cron job/systemd timer")
+    parser.add_argument("-t", "--timer-job", action="store_true", help="Indicate that this is running from a cron job/systemd timer")
     parser.add_argument("zonefile", help="Zone file to update")
     args = parser.parse_args()
     main(args.zonefile, args.url, args.credentials, str(args.subdomains).split(","), args.verbose, args.quiet, args.timer_job)
