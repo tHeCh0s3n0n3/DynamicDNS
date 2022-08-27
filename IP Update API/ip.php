@@ -83,8 +83,6 @@ function UpdateIP($subdomain, $ip) {
         if($result['ip'] == $ip) {
             // No updated needed.
             http_response_code(304);
-            $response->result = 304;
-            echo json_encode($response);
             exit();
         }
         $query = "UPDATE Subdomains SET ip = :ip WHERE subdomain = :subdomain";
