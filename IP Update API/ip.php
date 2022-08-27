@@ -21,54 +21,23 @@ if(isset($_GET['action'])) {
         case "getAll":
             ProcessGetAll();
             break;
+        case "auto-update": // Service-side update
+            ProcessServerSideUpdate();
+            break;
         default:
             die();
     }
 }
 
 function ProcessUpdate() {
-    require_once("SQLiteConnection.inc.php");
-    $pdo = (new SQLiteConnection())->connect();
-    if (null == $pdo) {
-        echo 'Whoops, could not connect to the SQLite database!';        
-        http_response_code(500);
-        die();
-    }
-    
-    $subdomain = $_POST['subdomain'];
-    $ip = $_POST['ip'];
-
-    $sth = $pdo->prepare("SELECT * FROM Subdomains WHERE subdomain = :subdomain");
-    $sth->bindParam(":subdomain", $subdomain);
-    $sth->execute();
-    $result = $sth->fetch(PDO::FETCH_ASSOC);
-
-    $query = "";
-    if (false !== $result) {        
-        if($result['ip'] == $ip) {
-            // No updated needed.
-            http_response_code(304);
-            exit();
-        }
-        $query = "UPDATE Subdomains SET ip = :ip WHERE subdomain = :subdomain";
-    } else {
-        $query = "INSERT INTO Subdomains (subdomain, ip) VALUES (:subdomain, :ip)";
-    }
-
-    $sth2 = $pdo->prepare($query);
-    $sth2->bindParam(":ip", $ip);
-    $sth2->bindParam(":subdomain", $subdomain);
-    $sth2->execute();
-    echo "Done";
-    http_response_code(201);
-    exit();
+    UpdateIP($_POST['subdomain'], $_POST['ip']);
 }
 
 function ProcessGetAll() {
     require_once("SQLiteConnection.inc.php");
     $pdo = (new SQLiteConnection())->connect();
     if (null == $pdo) {
-        echo 'Whoops, could not connect to the SQLite database!';        
+        echo 'Whoops, could not connect to the SQLite database!';
         http_response_code(500);
         die();
     }
@@ -80,7 +49,59 @@ function ProcessGetAll() {
     exit();
 }
 
-/** 
+function ProcessServerSideUpdate() {
+    // Get the IP of the calling client
+    $ip = $_SERVER['REMOTE_ADDR'];
+    if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    }
+
+    UpdateIP($_GET['subdomain'], $ip);
+}
+
+function UpdateIP($subdomain, $ip) {
+    $response = new stdClass();
+
+    $response->subdomain = $subdomain;
+    $response->ip = $ip;
+
+    require_once("SQLiteConnection.inc.php");
+    $pdo = (new SQLiteConnection())->connect();
+    if (null == $pdo) {
+        echo 'Whoops, could not connect to the SQLite database!';
+        http_response_code(500);
+        die();
+    }
+
+    $sth = $pdo->prepare("SELECT * FROM Subdomains WHERE subdomain = :subdomain");
+    $sth->bindParam(":subdomain", $subdomain);
+    $sth->execute();
+    $result = $sth->fetch(PDO::FETCH_ASSOC);
+
+    $query = "";
+    if (false !== $result) {
+        if($result['ip'] == $ip) {
+            // No updated needed.
+            http_response_code(304);
+            $response->result = 304;
+            echo json_encode($response);
+            exit();
+        }
+        $query = "UPDATE Subdomains SET ip = :ip WHERE subdomain = :subdomain";
+    } else {
+        $query = "INSERT INTO Subdomains (subdomain, ip) VALUES (:subdomain, :ip)";
+    }
+
+    $sth2 = $pdo->prepare($query);
+    $sth2->bindParam(":ip", $ip);
+    $sth2->bindParam(":subdomain", $subdomain);
+    $sth2->execute();
+    http_response_code(201);
+    $response->result = 201;
+    echo json_encode($response);
+}
+
+/**
  * Get header Authorization
  * */
 function getAuthorizationHeader(){
