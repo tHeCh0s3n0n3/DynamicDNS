@@ -1,0 +1,10 @@
+[Unit]
+description=Start the dyndns auto update client
+ConditionACPower=true
+After=network.target network-online.target systemd-networkd.service NetworkManager.service connman.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'python3 dyndns-auto-update.py -t -u "<URL>" -c $$(cat dyndns-auto-update-credentials.txt) -s <SUBDOMAIN>'
+KillMode=process
+TimeoutStopSec=900
