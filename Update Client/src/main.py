@@ -44,16 +44,31 @@ def TriggerIPUpdate(url: str, credentials: str, subdomain: str):
         f.args['action'] = 'auto-update'
         f.args['subdomain'] = subdomain
         url = f.url
+        logging.debug(f"Final URL: {url}")
 
+        result = type('', (), {})()
         with urllib.request.urlopen(
             urllib.request.Request(url, headers=headers, method="GET")) as response:
             responseBody = response.read()
-            logging.debug(f"Response Body:\n{responseBody}")
+        # logging.debug(f"Response Body:\n{responseBody}")
+        # logging.debug(f"Response Code: {response.getcode()}")
+        # if response.getcode() == 304:
+        #     result = type('', (), {})()
+        #     result.subdomain = subdomain
+        #     result.ip = ''
+        #     result.result = 304
+        # else:
             result = json.loads(responseBody)
     except HTTPError as err:
         if err.code == 401:
             logging.error("HTTP Authentication failed. Quitting")
             exit(2)
+        if err.code == 304:
+            logging.debug("Received HTTP 304-NOT MODIFIED")
+            result = type('', (), {})()
+            result.subdomain = subdomain
+            result.ip = ''
+            result.result = 304
     return result
 
 if __name__ == "__main__":
@@ -63,7 +78,7 @@ if __name__ == "__main__":
     group.add_argument("-q", "--quiet", action="store_true", help="Suppress all output")
     parser.add_argument("-u", "--url", help="URL to trigger the update")
     parser.add_argument("-c", "--credentials", help="Credentials to use in the HTTP Authorization header (username:password)")
-    parser.add_argument("-s", "--subdomain", help="Subdomains to update")
+    parser.add_argument("-s", "--subdomains", help="Subdomains to update")
     parser.add_argument("-t", "--timer-job", action="store_true", help="Indicate that this is running from a cron job/systemd timer")
     args = parser.parse_args()
     main(args.url, args.credentials, str(args.subdomains).split(","), args.verbose, args.quiet, args.timer_job)
